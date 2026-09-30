@@ -41,6 +41,12 @@ def db_session():
 
 
 @pytest.fixture
+def session_factory():
+    """Provide the TestingSessionLocal factory bound to test_engine."""
+    return TestingSessionLocal
+
+
+@pytest.fixture
 def client(db_session):
     """TestClient configured with SQLite DB override."""
     def override_get_db():
