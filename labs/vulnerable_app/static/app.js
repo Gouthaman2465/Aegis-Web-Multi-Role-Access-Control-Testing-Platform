@@ -4,6 +4,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const ownId = dataEl ? dataEl.getAttribute("data-user-id") : "1";
     const ownOrderId = dataEl ? dataEl.getAttribute("data-order-id") : "1";
 
+    // Stage 2 planted test artifacts
+    const AWS_DEV_KEY = "AKIAIOSFODNN7EXAMPLE";
+    const LEGACY_EXPORT_PATH = "/api/legacy/export";
+
     try {
         // 1. Fetch API token with cookie credentials
         const tokenRes = await fetch("/api/token", { credentials: "same-origin" });
@@ -25,6 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             fetch("/api/me", { headers: authHeaders }),
             fetch("/api/notifications", { headers: authHeaders }),
             fetch("/api/products", { headers: authHeaders }),
+            fetch("/api/cors-reflect", { headers: authHeaders }),
             fetch("/api/internal/config"), // Unauthenticated endpoint
             fetch("/api/profile/" + ownId, { headers: authHeaders }),
             fetch("/api/orders/" + ownOrderId, { headers: authHeaders }),

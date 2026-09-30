@@ -12,6 +12,8 @@ Phase 6: `validate_url` supports `syntax_only=True` — avoids DNS timeouts duri
 Phase 7: `addopts = --import-mode=importlib` in `pytest.ini` — allows multiple test suites across `backend/tests/` and `scanner/tests/` to share module basenames like `test_compare.py` without import collision.
 Phase 8: Vite dev and preview proxies configured for `/api` to backend port 8000; session storage used for tab-scoped JWT token to avoid cross-tab CSRF/CORS complexity while keeping security boundary clear.
 Phase 9: Comprehensive Hard Constraints verification completed mapping all 20 architectural constraints to enforcing code and test files.
+Phase 10: Discovered same-origin GET endpoints without `{}` placeholders fed back into replay pipeline as synthetic `RecordedRequest`s — allows normal stability, cross-role replay, candidate filtering, and scoring to discover hidden access control flaws like `GET /api/legacy/export` without duplicating replay logic.
+Phase 11: Dynamic random-token soft-404 baseline probe with similarity threshold < 0.9 before checking exposed files — suppresses false-positive findings on Single Page Applications and custom 404 handlers while guaranteeing detection of genuine `.git/HEAD` and `.env` files.
 
 ---
 

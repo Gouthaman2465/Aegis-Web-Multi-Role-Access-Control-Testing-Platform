@@ -28,6 +28,8 @@ from aegis_scanner.recorder.crawler import record_account
 from aegis_scanner.replay.planner import build_replay_plan, ReplayTask
 from aegis_scanner.replay.replayer import Replayer
 from aegis_scanner.replay.verdict import classify_response
+from aegis_scanner.modules.js_analysis import run_js_analysis
+from aegis_scanner.modules.misconfig import run_misconfig_checks
 
 CVSS_VECTORS = {
     "HORIZONTAL_ACCESS": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
@@ -122,6 +124,33 @@ def run_access_control_scan(
     if shell_res.status in (200, 301, 302) and shell_res.body:
         app_shell_fingerprint = normalize_body(shell_res.body, shell_res.headers.get("content-type"))
 
+    extra_findings: list[FindingResult] = []
+
+    # Stage 2: JavaScript Analysis (endpoints, secrets, source maps)
+    if "js_analysis" in config.modules:
+        report("planning", 47, "Analyzing recorded JavaScript files and discovering endpoints...", "info")
+        recorded_scripts = [r for r in all_recorded if r.resource_type == "script" and r.response_body]
+        js_findings, synthetic_reqs = run_js_analysis(
+            recorded_scripts=recorded_scripts,
+            config=config,
+            replayer=replayer,
+            report=report,
+            app_shell_fingerprint=app_shell_fingerprint,
+        )
+        all_recorded.extend(synthetic_reqs)
+        extra_findings.extend(js_findings)
+
+    # Stage 2: Web Security Misconfiguration Checks
+    if "misconfig" in config.modules:
+        report("planning", 49, "Running web security misconfiguration checks...", "info")
+        misconfig_findings = run_misconfig_checks(
+            recorded_requests=all_recorded,
+            config=config,
+            replayer=replayer,
+            report=report,
+        )
+        extra_findings.extend(misconfig_findings)
+
     tasks = build_replay_plan(
         recorded_by_account=all_recorded,
         accounts=config.accounts,
@@ -131,7 +160,7 @@ def run_access_control_scan(
     report("planning", 50, f"Constructed replay plan with {len(tasks)} tasks.", "info")
 
     if not tasks or should_cancel():
-        return ScanResult(endpoints=all_recorded, findings=[], stats=stats)
+        return ScanResult(endpoints=all_recorded, findings=extra_findings, stats=stats)
 
     # -------------------------------------------------------------
     # 3. Control Replays & Stability Check (50% - 60%)
@@ -180,7 +209,7 @@ def run_access_control_scan(
     # To ensure anonymous checks are available for looks_public, sort tasks so anonymous runs first
     sorted_tasks = sorted(stable_tasks, key=lambda t: 0 if t.tested is None else 1)
 
-    raw_findings: list[FindingResult] = []
+    raw_findings: list[FindingResult] = list(extra_findings)
 
     for idx, task in enumerate(sorted_tasks):
         if should_cancel():

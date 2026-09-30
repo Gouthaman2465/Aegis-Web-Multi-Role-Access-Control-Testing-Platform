@@ -252,6 +252,44 @@ def create_app():
             {"id": 2, "name": "Super Gizmo", "price": 49.99},
         ])
 
+    # -------------------------------------------------------------
+    # Stage 2 Planted Test Issues
+    # -------------------------------------------------------------
+    @app.route("/.git/HEAD")
+    def git_head():
+        return "ref: refs/heads/main\n", 200, {"Content-Type": "text/plain"}
+
+    @app.route("/.env")
+    def env_file():
+        return "APP_KEY=lab-not-a-real-key\nDB_PASS=fake-pass-not-real\n", 200, {"Content-Type": "text/plain"}
+
+    @app.route("/api/cors-reflect")
+    def api_cors_reflect():
+        origin = request.headers.get("Origin", "*")
+        resp = jsonify({"status": "cors-test-endpoint"})
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Access-Control-Allow-Credentials"] = "true"
+        return resp
+
+    @app.route("/redirect")
+    def open_redirect():
+        next_url = request.args.get("next") or request.args.get("url") or "/"
+        return redirect(next_url, code=302)
+
+    @app.route("/api/legacy/export")
+    def api_legacy_export():
+        user = _get_bearer_user()
+        if not user:
+            return jsonify({"error": "Unauthorized"}), 401
+        # Bug: VERTICAL - exposes all user details without admin role check
+        return jsonify({
+            "export_version": "1.0",
+            "users": [
+                {"id": u["id"], "username": u["username"], "email": u["email"], "role": u["role"]}
+                for u in USERS.values()
+            ]
+        })
+
     return app
 
 
