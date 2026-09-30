@@ -31,6 +31,14 @@ class Normalized:
     text: str                    # canonical string for comparison
     raw_len: int                 # length of raw input
 
+    @property
+    def has_content(self) -> bool:
+        """Return True if normalized body contains meaningful content after noise removal."""
+        if self.kind == "json":
+            return bool(self.flat)
+        return bool(self.text.strip())
+
+
 
 def _clean_json_node(node: Any) -> Any:
     """Recursively strip volatile keys and normalize datetime values in JSON structures."""
