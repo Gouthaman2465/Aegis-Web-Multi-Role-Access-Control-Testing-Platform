@@ -1,0 +1,18 @@
+{
+  "must_find": [
+    {"type": "HORIZONTAL_ACCESS", "signature": "GET /orders/{id}"},
+    {"type": "HORIZONTAL_ACCESS", "signature": "GET /api/profile/{id}"},
+    {"type": "VERTICAL_ACCESS", "signature": "GET /admin/users"},
+    {"type": "UNAUTHENTICATED_ACCESS", "signature": "GET /api/internal/config"}
+  ],
+  "must_not_flag": [
+    "GET /api/orders/{id}",
+    "GET /api/admin/stats",
+    "GET /api/me",
+    "GET /api/notifications",
+    "GET /api/products",
+    "GET /api/token",
+    "GET /dashboard",
+    "GET /login"
+  ]
+}

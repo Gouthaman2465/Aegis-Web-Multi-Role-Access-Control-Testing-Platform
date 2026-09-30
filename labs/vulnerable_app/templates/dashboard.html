@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+</head>
+<body>
+    <h2>User Portal</h2>
+    <p>Logged in as <span id="current-user">{{ user.username }}</span></p>
+
+    <div id="app-data" data-user-id="{{ user.id }}" data-order-id="{{ user.order_id }}"></div>
+
+    <nav>
+        <ul>
+            <li><a href="/orders/{{ user.order_id }}">View My Order #{{ user.order_id }}</a></li>
+            {% if user.role == 'admin' %}
+            <li><a href="/admin/users">User Directory</a></li>
+            {% endif %}
+            <li><a href="/logout">Sign Out</a></li>
+        </ul>
+    </nav>
+
+    <div id="api-status">Loading application services...</div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
