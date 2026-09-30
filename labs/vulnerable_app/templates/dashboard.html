@@ -13,6 +13,7 @@
     <nav>
         <ul>
             <li><a href="/orders/{{ user.order_id }}">View My Order #{{ user.order_id }}</a></li>
+            <li><a href="/redirect?next=/dashboard">Switch Account</a></li>
             {% if user.role == 'admin' %}
             <li><a href="/admin/users">User Directory</a></li>
             {% endif %}

@@ -174,19 +174,7 @@ python scripts/benchmark.py
 ### Real Execution Benchmark Output
 ```
 ======================================================================
- AEGIS-WEB ACCESS-CONTROL BENCHMARK
-======================================================================
-[*] Target URL: http://127.0.0.1:54321
-[*] Ground truth items: 4 must find, 8 must not flag
-...
-[*] Scan completed in 17.31 seconds.
-    Total requests recorded: 40
-    Total replays executed:  86
-    Discarded low-conf:      7
-    Total findings produced: 17
-
-----------------------------------------------------------------------
- GROUND TRUTH VERIFICATION (MUST FIND)
+ STAGE 1: ACCESS-CONTROL GROUND TRUTH VERIFICATION (MUST FIND)
 ----------------------------------------------------------------------
  [✔] FOUND: HORIZONTAL_ACCESS       GET /orders/{id}          (Conf: 100%, Medium)
  [✔] FOUND: HORIZONTAL_ACCESS       GET /api/profile/{id}     (Conf: 100%, Medium)
@@ -198,12 +186,41 @@ python scripts/benchmark.py
 ----------------------------------------------------------------------
  [✔] Zero false positives detected on safe routes.
 
+----------------------------------------------------------------------
+ STAGE 2: EXTENDED MISCONFIG & JS ANALYSIS VERIFICATION
+----------------------------------------------------------------------
+ [✔] FOUND: VERTICAL_ACCESS         GET /api/legacy/export    (Conf: 95%, Medium)
+ [✔] FOUND: HARDCODED_SECRET        Hard-coded secret in JavaScript (Conf: 90%, Medium)
+ [✔] FOUND: CORS_MISCONFIGURATION   GET /api/cors-reflect     (Conf: 95%, High)
+ [✔] FOUND: EXPOSED_FILE            GET /.git/HEAD            (Conf: 95%, High)
+ [✔] FOUND: EXPOSED_FILE            GET /.env                 (Conf: 95%, High)
+ [✔] FOUND: OPEN_REDIRECT           GET /redirect?next        (Conf: 95%, Medium)
+
 ======================================================================
- BENCHMARK SUMMARY: Found 4 of 4 | False Positives: 0
- Precision: 100.0% | Recall: 100.0%
+ BENCHMARK SUMMARY:
+   Stage 1 Core: Found 4 of 4 | False Positives: 0
+   Stage 1 Metrics: Precision: 100.0% | Recall: 100.0%
+   Stage 2 Bonus: Found 6 of 6 planted issues
 ======================================================================
-[*] Benchmark PASSED: 100% Precision and 100% Recall achieved.
+[*] Benchmark PASSED: All Stage 1 and Stage 2 issues detected with 0 false positives.
 ```
+
+---
+
+## Stage 2 Extended Modules
+
+In addition to core multi-role access control replay, Aegis-Web includes two modular security assessment extensions:
+
+### 1. JavaScript Static Analysis & Feedback Loop (`modules/js_analysis.py`)
+- **Endpoint Extraction:** Scans recorded client JavaScript bundles for quoted API paths matching `/api/`, `/rest/`, `/v1/`, `/graphql`, or `/admin`. Discovered same-origin GET endpoints (up to 30) are automatically fed back into the multi-role replay engine to detect hidden or unlinked access control flaws (e.g. `GET /api/legacy/export`).
+- **Hard-Coded Secret Auditing:** Detects high-risk client credentials including AWS Access Keys (`AKIA...`), Google API Keys (`AIza...`), Private Keys (`BEGIN PRIVATE KEY`), and generic API tokens/passwords matching Shannon entropy $\ge 3.5$. Discovered secrets are masked (first 4 and last 2 characters retained, e.g. `AKIA...LE`) and are **never** executed or used against the target.
+- **Source Map Exposure:** Detects `//# sourceMappingURL=` declarations and validates whether unminified developer source trees (`sources`) are publicly accessible (CWE-540).
+
+### 2. Web Security Misconfiguration Checks (`modules/misconfig.py`)
+- **CORS Policy Validation:** Tests authenticated endpoints against untrusted (`https://evil.example`) and `null` origins to detect arbitrary origin reflection and credential exposure (CWE-942).
+- **Sensitive File Probing with Soft-404 Baselines:** Probes for exposed files (`/.git/HEAD`, `/.env`, `/.DS_Store`, `/backup.zip`, `/config.json`, `/phpinfo.php`, `/server-status`). To avoid false positives on Single Page Applications and custom 404 handlers, every probe response is compared against a randomized non-existent baseline URL; responses with similarity $\ge 0.9$ to the baseline are discarded.
+- **Open Redirect Auditing:** Identifies query parameters (`redirect`, `next`, `url`, `return`, `dest`) and validates whether unvalidated external redirects occur (CWE-601). Aegis-Web never follows the redirect destination.
+- **Cookie Security Flag Audits:** Examines all recorded `Set-Cookie` headers for missing `HttpOnly`, `SameSite`, and `Secure` (over HTTPS) attributes on session cookies (CWE-1004, CWE-614).
 
 ---
 

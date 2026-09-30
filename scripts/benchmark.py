@@ -92,12 +92,13 @@ def main():
         max_depth=3,
         request_delay_ms=50,
         allow_private=True,
+        modules=["access_control", "js_analysis", "misconfig"],
     )
 
     def report_progress(stage: str, percent: int, msg: str, level: str):
         print(f"[{percent:3d}%] [{stage.upper()}] {msg}")
 
-    print("\n[*] Commencing access-control scan...")
+    print("\n[*] Commencing full-spectrum scan (Stage 1 + Stage 2)...")
     start_time = time.time()
     try:
         scan_result = run_access_control_scan(
@@ -115,11 +116,11 @@ def main():
     print(f"    Discarded low-conf:      {scan_result.stats.get('discarded_low_confidence', 0)}")
     print(f"    Total findings produced: {len(scan_result.findings)}\n")
 
-    # Evaluate against ground truth
+    # Evaluate Stage 1 against ground truth
     tp_count = 0
     fn_count = 0
     print("-" * 70)
-    print(" GROUND TRUTH VERIFICATION (MUST FIND)")
+    print(" STAGE 1: ACCESS-CONTROL GROUND TRUTH VERIFICATION (MUST FIND)")
     print("-" * 70)
 
     for item in must_find:
@@ -155,20 +156,52 @@ def main():
         for fp in false_positives:
             print(f" [✘] FALSE POSITIVE: {fp.type:<22} {fp.signature:<25} (URL: {fp.url})")
 
+    # Evaluate Stage 2 separately
+    stage2_must_find = ground_truth.get("stage2_must_find", [])
+    s2_tp = 0
+    s2_fn = 0
+    if stage2_must_find:
+        print("\n" + "-" * 70)
+        print(" STAGE 2: EXTENDED MISCONFIG & JS ANALYSIS VERIFICATION")
+        print("-" * 70)
+        for item in stage2_must_find:
+            exp_type = item.get("type")
+            exp_sig = item.get("signature")
+            exp_title = item.get("title")
+
+            matches = [
+                f for f in scan_result.findings
+                if (exp_type is None or f.type == exp_type)
+                and (exp_sig is None or f.signature == exp_sig)
+                and (exp_title is None or f.title == exp_title)
+            ]
+
+            label = exp_sig or exp_title or exp_type
+            if matches:
+                s2_tp += 1
+                best_match = max(matches, key=lambda m: m.confidence)
+                print(f" [✔] FOUND: {exp_type:<23} {label:<25} (Conf: {best_match.confidence}%, {best_match.severity})")
+            else:
+                s2_fn += 1
+                print(f" [✘] MISSED: {exp_type:<23} {label:<25}")
+
     # Metrics
     precision = (tp_count / (tp_count + fp_count)) if (tp_count + fp_count) > 0 else 0.0
     recall = (tp_count / (tp_count + fn_count)) if (tp_count + fn_count) > 0 else 0.0
 
     print("\n" + "=" * 70)
-    print(f" BENCHMARK SUMMARY: Found {tp_count} of {len(must_find)} | False Positives: {fp_count}")
-    print(f" Precision: {precision:.1%} | Recall: {recall:.1%}")
+    print(f" BENCHMARK SUMMARY:")
+    print(f"   Stage 1 Core: Found {tp_count} of {len(must_find)} | False Positives: {fp_count}")
+    print(f"   Stage 1 Metrics: Precision: {precision:.1%} | Recall: {recall:.1%}")
+    if stage2_must_find:
+        print(f"   Stage 2 Bonus: Found {s2_tp} of {len(stage2_must_find)} planted issues")
     print("=" * 70 + "\n")
 
-    if fn_count > 0 or fp_count > 0:
+    if fn_count > 0 or fp_count > 0 or s2_fn > 0:
         print("[!] Benchmark FAILED: Missed flaws or false positives encountered.")
         sys.exit(1)
 
-    print("[*] Benchmark PASSED: 100% Precision and 100% Recall achieved.")
+    print("[*] Benchmark PASSED: All Stage 1 and Stage 2 issues detected with 0 false positives.")
     sys.exit(0)
 
 

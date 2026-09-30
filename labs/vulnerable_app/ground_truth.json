@@ -14,5 +14,13 @@
     "GET /api/token",
     "GET /dashboard",
     "GET /login"
+  ],
+  "stage2_must_find": [
+    {"type": "VERTICAL_ACCESS", "signature": "GET /api/legacy/export"},
+    {"type": "HARDCODED_SECRET", "title": "Hard-coded secret in JavaScript"},
+    {"type": "CORS_MISCONFIGURATION", "signature": "GET /api/cors-reflect"},
+    {"type": "EXPOSED_FILE", "signature": "GET /.git/HEAD"},
+    {"type": "EXPOSED_FILE", "signature": "GET /.env"},
+    {"type": "OPEN_REDIRECT", "signature": "GET /redirect?next"}
   ]
 }

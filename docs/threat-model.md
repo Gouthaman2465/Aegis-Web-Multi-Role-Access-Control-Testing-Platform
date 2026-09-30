@@ -36,3 +36,13 @@ Aegis-Web stores authentication tokens in React state mirrored to `sessionStorag
 - **Trade-off:**
   - Tokens in `sessionStorage` can be accessed by scripts running in the same origin if Cross-Site Scripting (XSS) is present.
   - This risk is mitigated on the platform frontend by strictly disallowing `dangerouslySetInnerHTML`, escaping all output, and maintaining strict Content Security Policy headers (`nosniff`, `no-referrer`, `no-store`).
+
+---
+
+## 3. Stage 2 Probing & Secret Handling Rules
+
+Stage 2 introduces active JavaScript bundle inspection (`modules/js_analysis.py`) and security misconfiguration checks (`modules/misconfig.py`):
+- **Read-Only Probe Constraint:** All Stage 2 probes (CORS origin checks, sensitive file checks, open redirect parameter probes, source map fetches) are strictly passive or read-only HTTP `GET` requests. They never submit state-changing data, never invoke DELETE/PUT/POST operations, and never follow external redirect targets.
+- **Zero Secret Re-use:** Any credential or secret discovered during client script analysis (such as AWS keys, Google API keys, or private key blocks) is **never used by the scanner engine** to attempt unauthorized access or escalation against third-party or target APIs.
+- **Strict Masking:** All discovered secrets are masked immediately upon extraction (retaining only the first 4 and last 2 characters, e.g. `AKIA...LE`). Raw unmasked credentials are never logged, never stored in the database, and never returned in API payloads or finding evidence.
+- **Safe Baseline Diffing:** Exposed file probes use dynamic, randomized 404 baselines to prevent alert fatigue from Single Page Application catch-all routes.
