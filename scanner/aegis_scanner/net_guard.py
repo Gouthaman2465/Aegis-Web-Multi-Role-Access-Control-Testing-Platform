@@ -132,10 +132,11 @@ def _resolve_host(host: str) -> list[str]:
         raise BlockedTargetError(f"Failed to resolve host '{host}': {e}") from e
 
 
-def validate_url(url: str, allow_private: bool = False) -> list[str]:
+def validate_url(url: str, allow_private: bool = False, syntax_only: bool = False) -> list[str]:
     """Validate a URL against SSRF rules and return all resolved IPs.
 
     Raises BlockedTargetError if scheme, userinfo, port, host, or any resolved IP is prohibited.
+    If syntax_only is True, hostname resolution is skipped (only direct IP strings are checked).
     """
     if not url or not isinstance(url, str):
         raise BlockedTargetError("URL must be a non-empty string.")
@@ -164,6 +165,16 @@ def validate_url(url: str, allow_private: bool = False) -> list[str]:
 
     if port is not None and port == 0:
         raise BlockedTargetError("Port 0 is prohibited.")
+
+    if syntax_only:
+        direct_ip = _parse_raw_ip(hostname)
+        if direct_ip is not None:
+            if is_blocked_ip(str(direct_ip), allow_private=allow_private):
+                raise BlockedTargetError(
+                    f"Target host '{hostname}' is prohibited IP '{direct_ip}' (allow_private={allow_private})."
+                )
+            return [str(direct_ip)]
+        return []
 
     resolved_ips = _resolve_host(hostname)
 
