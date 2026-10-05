@@ -258,6 +258,6 @@ JWT access tokens are stored in React component state mirrored to tab-scoped `se
 
 ## Legal & Ethical Notice
 
-Aegis-Web is created for legitimate, authorized penetration testing, vulnerability assessment, and educational research. Automated scanning of web applications without explicit, written authorization from the system owner is illegal in many jurisdictions and strictly prohibited by most bug-bounty program terms. Always obtain verified authorization before initiating scans. In production deployments, ensure `ENABLE_LAB_MODE=false`.
+Aegis-Web is created for legitimate, authorized penetration testing, vulnerability assessment, and educational research. Automated scanning of web applications without explicit, written authorization from the system owner is illegal in many jurisdictions and strictly prohibited by most bug-bounty program terms. Always obtain verified authorization before initiating scans. In production deployments, ensure `ENABLE_LAB_MODE=false`
 
 
